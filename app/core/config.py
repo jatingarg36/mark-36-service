@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
 
+    # Frontend — where to redirect after successful OAuth callback
+    frontend_redirect_uri: str = "http://localhost:5173"
+
     @property
     def refresh_token_expire_seconds(self) -> int:
         return self.refresh_token_expire_days * 24 * 3600

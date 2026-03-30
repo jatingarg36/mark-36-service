@@ -5,9 +5,12 @@ Users routes → prefix /users (mounted by main.py)
 """
 
 from datetime import datetime
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import RedirectResponse
 
+from app.core.config import settings
 from app.core.dependencies import CurrentUser
 from app.modules.auth.oauth.google import GoogleOAuthProvider
 from app.modules.auth.schemas import (
@@ -38,18 +41,27 @@ async def google_login() -> dict:
 
 @auth_router.get(
     "/google/callback",
-    response_model=TokenResponse,
-    summary="Handle Google OAuth callback",
+    summary="Handle Google OAuth callback — redirects to frontend with tokens",
 )
-async def google_callback(code: str = Query(..., description="Authorization code from Google")) -> TokenResponse:
+async def google_callback(code: str = Query(..., description="Authorization code from Google")) -> RedirectResponse:
     provider = GoogleOAuthProvider()
     try:
-        return await handle_oauth_callback(provider, code)
+        token_response: TokenResponse = await handle_oauth_callback(provider, code)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"OAuth callback failed: {exc}",
         ) from exc
+
+    # Redirect to the frontend with tokens as query params.
+    # The frontend reads, stores, and immediately strips these from the URL bar.
+    params = urlencode({
+        "access_token": token_response.access_token,
+        "refresh_token": token_response.refresh_token,
+    })
+    redirect_url = f"{settings.frontend_redirect_uri}?{params}"
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+
 
 
 @auth_router.post(

@@ -1,11 +1,12 @@
-version: "3.9"
-
 services:
   app:
     build: .
     container_name: mark36-app
     ports:
       - "8000:8000"
+    volumes:
+      - ./app:/app/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     env_file:
       - .env
     environment:

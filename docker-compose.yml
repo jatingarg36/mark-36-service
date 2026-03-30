@@ -1,9 +1,6 @@
 services:
   app:
     build: .
-    container_name: mark36-app
-    # ports:
-    #   - "8000:8000"
     expose:
       - "8000"
     volumes:
@@ -22,12 +19,22 @@ services:
     restart: unless-stopped
     networks:
       - gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mark36.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.mark36.entrypoints=web"
+      - "traefik.http.services.mark36.loadbalancer.server.port=8000"
+      - "traefik.http.routers.mark36.middlewares=rate-limit@file,ip-allowlist@file"
+      # health check — Traefik won't route to a replica until this passes
+      - "traefik.http.services.mark36.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.mark36.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.services.mark36.loadbalancer.healthcheck.timeout=3s"
 
   mongo:
     image: mongo:7.0
     container_name: mark36-mongo
-    ports:
-      - "27017:27017"
+    expose:
+      - "27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -42,8 +49,8 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: mark36-redis
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -54,11 +61,11 @@ services:
     restart: unless-stopped
     networks:
       - gateway
-      
+
 volumes:
   mongo_data:
   redis_data:
 
 networks:
   gateway:
-    external: true   
+    external: true
